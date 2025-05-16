@@ -3,116 +3,406 @@
 <head>
   <meta charset="UTF-8">
   <title>Solar System Idle Game</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="icon" href="data:,🌞">
   <style>
-    body { font-family: Arial, sans-serif; background: #10161b; color: #fff; text-align: center; }
-    .container { max-width: 600px; margin: 2em auto; background: #19222b; padding: 2em; border-radius: 12px; }
-    button { padding: 0.7em 1.5em; margin: 1em 0.5em; border: none; border-radius: 6px; background: #ffd700; color: #222; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+    body { font-family: Arial, sans-serif; background: #10161b; color: #fff; text-align: center; margin: 0; }
+    .container { max-width: 700px; margin: 2em auto; background: #181f28; padding: 2em 1em; border-radius: 14px; box-shadow: 0 0 40px #0006; }
+    h1 { margin-bottom: 0.2em; }
+    button, select { font-size: 1em; }
+    button { padding: 0.6em 1.1em; margin: 0.6em 0.3em 0.6em 0; border: none; border-radius: 6px; background: #ffd700; color: #222; font-weight: bold; cursor: pointer; transition: background 0.2s; }
     button:disabled { background: #555; color: #aaa; cursor: not-allowed; }
     .planet-list { margin: 2em 0; }
-    .planet { background: #222d3a; margin: 1em 0; padding: 1em; border-radius: 8px; }
-    .planet h3 { margin: 0.2em 0; }
+    .planet { background: #232d3a; margin: 0.7em 0; padding: 1em; border-radius: 9px; display: flex; align-items: center; justify-content: space-between; }
+    .planet img { width: 30px; vertical-align: middle; }
+    .planet .info { flex: 1; text-align: left; margin-left: 1em; }
     .stat { margin: 1em 0; }
     .stardust { color: #ffd700; font-size: 1.4em; }
+    .section-title { margin: 1.8em 0 0.5em; font-size: 1.2em; color: #9df; }
+    .achievements, .research, .stats { background: #14202b; border-radius: 8px; padding: 1em; margin: 1em 0; text-align: left; }
+    .achievements span.ach { color: #ffd700; margin-right: 1.5em; }
+    .achievements span.locked { color: #888; margin-right: 1.5em; }
+    .stats { font-size: 0.97em; }
+    .prestige-btn { background: #e0e; color: #fff; }
+    .research-btn { background: #0cf; color: #fff; }
+    .galaxy-point { color: #e0e; font-weight: bold; }
+    .saved { color: #0f0; font-size: 0.9em; }
+    .sound-toggle { float: right; margin-top: -2em; }
+    @media(max-width: 720px) {
+      .container { padding: 1em 0.1em; }
+      .planet .info { font-size: 0.95em; }
+    }
   </style>
 </head>
 <body>
 <div class="container">
   <h1>Solar System Idle Game</h1>
+  <button class="sound-toggle" onclick="toggleSound()" id="soundBtn">🔊</button>
   <div class="stat">
-    <span>Stardust: </span>
-    <span class="stardust" id="stardust">0</span>
-    <span>/s: <span id="perSec">0</span></span>
+    <span>Stardust: <span class="stardust" id="stardust">0</span></span>
+    <span>&nbsp;|&nbsp;Per second: <span id="perSec">0</span></span>
+  </div>
+  <div class="stat">
+    <span>Galaxy Points: <span class="galaxy-point" id="galaxyPoints">0</span></span>
+    <button class="prestige-btn" id="prestigeBtn" onclick="prestige()" style="display:none">Galaxy Reset (Prestige)</button>
   </div>
   <button id="collectBtn">Collect Stardust (+1)</button>
+  
   <div class="planet-list" id="planets"></div>
+  
+  <div class="section-title">Automation & Upgrades</div>
+  <div id="autoUpgrades"></div>
+
+  <div class="section-title">Research</div>
+  <div class="research" id="research"></div>
+
+  <div class="section-title">Achievements</div>
+  <div class="achievements" id="achievements"></div>
+  
+  <div class="section-title">Statistics</div>
+  <div class="stats" id="stats"></div>
+
+  <div id="saved" class="saved"></div>
 </div>
 <script>
+// --- DATA ---
 const PLANET_DATA = [
-  { name: "Sun", baseCost: 0, baseIncome: 1, unlocked: true },
-  { name: "Mercury", baseCost: 20, baseIncome: 2 },
-  { name: "Venus", baseCost: 100, baseIncome: 8 },
-  { name: "Earth", baseCost: 500, baseIncome: 20 },
-  { name: "Mars", baseCost: 2000, baseIncome: 65 },
-  { name: "Jupiter", baseCost: 7500, baseIncome: 250 },
-  { name: "Saturn", baseCost: 20000, baseIncome: 1100 },
-  { name: "Uranus", baseCost: 100000, baseIncome: 4800 },
-  { name: "Neptune", baseCost: 350000, baseIncome: 17000 }
+  { name: "Sun", emoji:"🌞", baseCost: 0, baseIncome: 1, unlocked: true },
+  { name: "Mercury", emoji:"☿️", baseCost: 25, baseIncome: 2 },
+  { name: "Venus", emoji:"♀️", baseCost: 120, baseIncome: 8 },
+  { name: "Earth", emoji:"🌍", baseCost: 600, baseIncome: 25 },
+  { name: "Mars", emoji:"♂️", baseCost: 2100, baseIncome: 80 },
+  { name: "Jupiter", emoji:"♃", baseCost: 8000, baseIncome: 290 },
+  { name: "Saturn", emoji:"♄", baseCost: 22000, baseIncome: 1200 },
+  { name: "Uranus", emoji:"⛢", baseCost: 110000, baseIncome: 5000 },
+  { name: "Neptune", emoji:"♆", baseCost: 350000, baseIncome: 18000 },
+  // Dwarf planets!
+  { name: "Pluto", emoji:"❄️", baseCost: 1000000, baseIncome: 55000 },
+  { name: "Ceres", emoji:"🪐", baseCost: 5000000, baseIncome: 180000 },
+  { name: "Eris", emoji:"💠", baseCost: 15000000, baseIncome: 610000 },
+  { name: "Haumea", emoji:"🥌", baseCost: 30000000, baseIncome: 1200000 },
+  { name: "Makemake", emoji:"🍉", baseCost: 50000000, baseIncome: 2000000 }
 ];
 
-let stardust = 0;
-let planets = PLANET_DATA.map((p, i) => ({
-  ...p,
-  unlocked: !!p.unlocked,
-  level: p.unlocked ? 1 : 0,
-  get cost() {
-    // Cost increases per level
-    return Math.floor(p.baseCost * Math.pow(1.15, this.level - (this.unlocked ? 1 : 0)));
-  },
-  get income() {
-    return p.baseIncome * this.level;
+const ACHIEVEMENTS = [
+  { id: 'firstStardust', name: 'First Stardust', desc: 'Collect your first Stardust.', test: g=>g.stats.totalClicks>=1 },
+  { id: 'planet5', name: 'Halfway There', desc: 'Unlock 5 planets.', test: g=>g.planets.filter(p=>p.unlocked).length>=5 },
+  { id: 'allPlanets', name: 'Solar Sovereign', desc: 'Unlock all planets.', test: g=>g.planets.filter(p=>p.unlocked).length===PLANET_DATA.length },
+  { id: 'automation1', name: 'Automation Initiate', desc: 'Buy your first automation upgrade.', test: g=>g.autoUpgrades[0].level>=1 },
+  { id: 'prestige1', name: 'Galactic Rebirth', desc: 'Prestige once.', test: g=>g.stats.totalPrestiges>=1 },
+  { id: 'galaxy10', name: 'Legendary Galaxy', desc: 'Earn 10 Galaxy Points.', test: g=>g.galaxyPoints>=10 }
+];
+
+const RESEARCH_TREE = [
+  { id: 'auto1', name: 'Basic Automation', cost: 1, desc: 'Unlocks automated Stardust collection.', unlock: g=>true, effect: g=>{g.autoUnlocked=true;} },
+  { id: 'boost1', name: 'Stardust Boost', cost: 2, desc: 'Increase all planet output by 10%.', unlock: g=>g.galaxyPoints>=1, effect: g=>{g.researchBoost+=0.10;} },
+  { id: 'auto2', name: 'Advanced Automation', cost: 4, desc: 'Automation is twice as efficient.', unlock: g=>g.research.has('auto1'), effect: g=>{g.automationFactor=2;} },
+  { id: 'boost2', name: 'Galactic Knowledge', cost: 8, desc: 'Increase all planet output by 20%.', unlock: g=>g.research.has('boost1'), effect: g=>{g.researchBoost+=0.20;} }
+];
+
+// --- GAME STATE ---
+let G = {
+  stardust: 0,
+  galaxyPoints: 0,
+  planets: PLANET_DATA.map(p=>({
+    ...p, unlocked: !!p.unlocked, level: p.unlocked?1:0,
+    get cost() { return this.baseCost ? Math.floor(this.baseCost * Math.pow(1.14, this.level - (this.unlocked?1:0))) : 0; },
+    get income() { return this.baseIncome * this.level; }
+  })),
+  autoUpgrades: [
+    { name: "Auto Collector", desc: "Automatically collects Stardust every second.", baseCost: 100, level: 0, cost: function(){return Math.floor(this.baseCost * Math.pow(2.3,this.level));}, effect: function(){return this.level;} }
+  ],
+  achievements: [],
+  research: new Set(),
+  automationFactor: 1,
+  autoUnlocked: false,
+  researchBoost: 0,
+  stats: {
+    totalStardust: 0,
+    totalClicks: 0,
+    totalUpgrades: 0,
+    totalPrestiges: 0,
+    totalResearched: 0,
+    timePlayed: 0 // seconds
   }
-}));
+};
+let autoCollectTimer = null;
+let soundOn = true;
+let lastTick = Date.now();
 
+// --- SOUND ---
+const audioCtx = window.AudioContext? new window.AudioContext():null;
+function playSound(freq, len=0.08) {
+  if(!soundOn || !audioCtx) return;
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  o.type = "triangle"; o.frequency.value = freq;
+  g.gain.value = 0.05;
+  o.connect(g); g.connect(audioCtx.destination);
+  o.start();
+  o.stop(audioCtx.currentTime+len);
+}
+function toggleSound() {
+  soundOn = !soundOn;
+  document.getElementById('soundBtn').textContent = soundOn ? "🔊" : "🔇";
+  if(soundOn) playSound(800,0.05);
+}
+
+// --- UI ---
 function updateUI() {
-  document.getElementById('stardust').textContent = Math.floor(stardust);
-  let perSec = planets.reduce((sum, p) => p.unlocked ? sum + p.income : sum, 0);
-  document.getElementById('perSec').textContent = perSec;
-
-  let planetDiv = document.getElementById('planets');
-  planetDiv.innerHTML = '';
-  planets.forEach((p, idx) => {
+  document.getElementById('stardust').textContent = Math.floor(G.stardust);
+  document.getElementById('galaxyPoints').textContent = G.galaxyPoints;
+  let perSec = getPerSec();
+  document.getElementById('perSec').textContent = perSec.toFixed(1);
+  // Planets
+  let pdiv = document.getElementById('planets');
+  pdiv.innerHTML = '';
+  G.planets.forEach((p, idx) => {
     let div = document.createElement('div');
     div.className = 'planet';
-    if (!p.unlocked && stardust < p.baseCost) div.style.opacity = 0.5;
-    div.innerHTML = `
-      <h3>${p.name} ${p.unlocked ? '' : '(Locked)'}</h3>
-      <div>Level: ${p.level}</div>
-      <div>Income: ${p.unlocked ? p.income : 0} Stardust/s</div>
-      ${!p.unlocked ? 
-        `<button ${stardust < p.baseCost ? 'disabled' : ''} onclick="unlockPlanet(${idx})">
-          Unlock for ${p.baseCost} Stardust
-        </button>` 
-        : 
-        `<button onclick="upgradePlanet(${idx})">
-          Upgrade (+1 Level, Cost: ${p.cost} Stardust)
-        </button>`
+    if (!p.unlocked && G.stardust < p.baseCost) div.style.opacity = 0.5;
+    div.innerHTML = `<span>${p.emoji}</span>
+      <div class="info">
+      <b>${p.name}</b> <span style="font-size:0.9em;color:#aaa">${p.unlocked?`Lv.${p.level}`:''}</span><br>
+      Income: ${p.unlocked?p.income:0} Stardust/s<br>
+      ${!p.unlocked
+        ? `<button ${G.stardust < p.baseCost ? 'disabled' : ''} onclick="unlockPlanet(${idx})">
+            Unlock for ${p.baseCost} Stardust
+          </button>`
+        : `<button onclick="upgradePlanet(${idx})">
+            Upgrade (Lv+1, Cost: ${p.cost} Stardust)
+          </button>`
       }
+      </div>
     `;
-    planetDiv.appendChild(div);
+    pdiv.appendChild(div);
+  });
+  // Automation
+  let autdiv = document.getElementById('autoUpgrades');
+  autdiv.innerHTML = '';
+  G.autoUpgrades.forEach((u, i) => {
+    autdiv.innerHTML += `<div>${u.name} (Lv.${u.level})<br>
+      <span style="font-size:0.95em">${u.desc}</span><br>
+      <button onclick="buyAutoUpgrade(${i})" ${G.stardust<u.cost()?'disabled':''}>
+        Buy (${u.cost()} Stardust)
+      </button></div>`;
+  });
+  // Research
+  let resdiv = document.getElementById('research');
+  resdiv.innerHTML = '';
+  RESEARCH_TREE.forEach(r => {
+    if(r.unlock(G)) {
+      resdiv.innerHTML += `<div>
+        <b>${r.name}</b> (${G.research.has(r.id)?"Purchased":"Cost: "+r.cost+" GP"})<br>
+        <span style="font-size:0.95em">${r.desc}</span><br>
+        <button class="research-btn" onclick="buyResearch('${r.id}')" ${G.galaxyPoints<r.cost||G.research.has(r.id)?'disabled':''}>
+          ${G.research.has(r.id)?"Purchased":"Research"}
+        </button>
+      </div>`;
+    }
+  });
+  // Achievements
+  let achDiv = document.getElementById('achievements');
+  achDiv.innerHTML = '';
+  ACHIEVEMENTS.forEach(a => {
+    let unlocked = G.achievements.includes(a.id);
+    achDiv.innerHTML += `<span class="${unlocked?'ach':'locked'}" title="${a.desc}">${unlocked?"🏆":"🔒"} ${a.name}</span>`;
+  });
+  // Stats
+  let s = G.stats;
+  let statsDiv = document.getElementById('stats');
+  statsDiv.innerHTML = `
+    Total Stardust earned: ${Math.floor(s.totalStardust)}<br>
+    Total clicks: ${s.totalClicks}<br>
+    Upgrades bought: ${s.totalUpgrades}<br>
+    Research completed: ${s.totalResearched}<br>
+    Prestiges: ${s.totalPrestiges}<br>
+    Time played: ${fmtTime(s.timePlayed)}
+  `;
+  // Prestige button
+  document.getElementById('prestigeBtn').style.display = canPrestige() ? "" : "none";
+}
+function fmtTime(s) {
+  let h = Math.floor(s/3600), m=Math.floor((s%3600)/60), sec=s%60;
+  return `${h}h ${m}m ${sec.toFixed(0)}s`;
+}
+
+// --- GAME LOGIC ---
+function getPerSec() {
+  let base = G.planets.reduce((sum,p)=>p.unlocked?sum+p.income:sum,0);
+  base *= (1+G.researchBoost);
+  return base;
+}
+function tick(dt) {
+  let perSec = getPerSec();
+  let inc = perSec * dt;
+  G.stardust += inc;
+  G.stats.totalStardust += inc;
+  G.stats.timePlayed += dt;
+  checkAchievements();
+  autoCollect();
+  updateUI();
+}
+function autoCollect() {
+  if (G.autoUnlocked || G.autoUpgrades[0].level>0) {
+    let amt = G.autoUpgrades[0].effect() * G.automationFactor;
+    if (amt>0) {
+      G.stardust += amt;
+      G.stats.totalStardust += amt;
+    }
+  }
+}
+function unlockPlanet(idx) {
+  let p = G.planets[idx];
+  if (!p.unlocked && G.stardust >= p.baseCost) {
+    G.stardust -= p.baseCost;
+    p.unlocked = true; p.level = 1;
+    playSound(500);
+    updateUI();
+    saveGame();
+  }
+}
+function upgradePlanet(idx) {
+  let p = G.planets[idx];
+  if (p.unlocked && G.stardust >= p.cost) {
+    G.stardust -= p.cost;
+    p.level += 1;
+    G.stats.totalUpgrades++;
+    playSound(700);
+    updateUI();
+    saveGame();
+  }
+}
+function buyAutoUpgrade(idx) {
+  let u = G.autoUpgrades[idx];
+  let c = u.cost();
+  if(G.stardust>=c) {
+    G.stardust -= c;
+    u.level++;
+    G.stats.totalUpgrades++;
+    playSound(900);
+    updateUI();
+    saveGame();
+  }
+}
+function buyResearch(id) {
+  let r = RESEARCH_TREE.find(x=>x.id===id);
+  if(!r||G.galaxyPoints<r.cost||G.research.has(r.id)) return;
+  G.galaxyPoints -= r.cost;
+  G.research.add(r.id);
+  r.effect(G);
+  G.stats.totalResearched++;
+  playSound(1200);
+  updateUI();
+  saveGame();
+}
+function canPrestige() {
+  // Prestige available if all planets unlocked and at least one upgrade on last
+  return G.planets.every(p=>p.unlocked) && G.planets[G.planets.length-1].level>=1;
+}
+function prestige() {
+  if(!canPrestige()) return;
+  let bonus = 1+Math.floor(Math.log10(G.stats.totalStardust+1));
+  G.galaxyPoints += bonus;
+  G.stats.totalPrestiges++;
+  playSound(1400,0.15);
+  // Soft reset
+  let keep = { galaxyPoints:G.galaxyPoints, research:new Set(G.research), stats:G.stats, automationFactor:G.automationFactor, researchBoost:G.researchBoost, autoUnlocked:G.autoUnlocked };
+  G = JSON.parse(JSON.stringify(G));
+  G.galaxyPoints = keep.galaxyPoints;
+  G.research = new Set([...keep.research]);
+  G.stats = keep.stats;
+  G.automationFactor = keep.automationFactor;
+  G.researchBoost = keep.researchBoost;
+  G.autoUnlocked = keep.autoUnlocked;
+  G.stardust = 0;
+  G.planets = PLANET_DATA.map(p=>({
+    ...p, unlocked: !!p.unlocked, level: p.unlocked?1:0,
+    get cost() { return this.baseCost ? Math.floor(this.baseCost * Math.pow(1.14, this.level - (this.unlocked?1:0))) : 0; },
+    get income() { return this.baseIncome * this.level; }
+  }));
+  G.autoUpgrades = [
+    { name: "Auto Collector", desc: "Automatically collects Stardust every second.", baseCost: 100, level: 0, cost: function(){return Math.floor(this.baseCost * Math.pow(2.3,this.level));}, effect: function(){return this.level;} }
+  ];
+  G.achievements = [];
+  // Re-apply research effects
+  RESEARCH_TREE.forEach(r => {if(G.research.has(r.id)) r.effect(G);});
+  updateUI();
+  saveGame();
+}
+function checkAchievements() {
+  ACHIEVEMENTS.forEach(a => {
+    if(!G.achievements.includes(a.id) && a.test(G)) {
+      G.achievements.push(a.id);
+      playSound(2000,0.15);
+      updateUI();
+      saveGame();
+    }
   });
 }
 
-window.unlockPlanet = function(idx) {
-  let p = planets[idx];
-  if (!p.unlocked && stardust >= p.baseCost) {
-    stardust -= p.baseCost;
-    p.unlocked = true;
-    p.level = 1;
+// --- SAVE/LOAD ---
+function saveGame() {
+  localStorage.setItem("solarIdleSave", JSON.stringify({
+    ...G, research:[...G.research]
+  }));
+  document.getElementById('saved').textContent = "Game Saved!";
+  setTimeout(()=>{document.getElementById('saved').textContent='';},1200);
+}
+function loadGame() {
+  let data = localStorage.getItem("solarIdleSave");
+  if(!data) return;
+  try {
+    let saved = JSON.parse(data);
+    G = {...G, ...saved};
+    // Fix planets array
+    G.planets = PLANET_DATA.map((p, i)=>({
+      ...p,
+      ...(saved.planets&&saved.planets[i]?saved.planets[i]:{}),
+      get cost() { return this.baseCost ? Math.floor(this.baseCost * Math.pow(1.14, this.level - (this.unlocked?1:0))) : 0; },
+      get income() { return this.baseIncome * this.level; }
+    }));
+    // Fix autoUpgrades
+    G.autoUpgrades = [
+      { name: "Auto Collector", desc: "Automatically collects Stardust every second.", baseCost: 100, level: saved.autoUpgrades?saved.autoUpgrades[0].level:0, cost: function(){return Math.floor(this.baseCost * Math.pow(2.3,this.level));}, effect: function(){return this.level;} }
+    ];
+    // Fix research
+    G.research = new Set(saved.research||[]);
+    // Re-apply research
+    G.automationFactor = 1; G.researchBoost = 0; G.autoUnlocked = false;
+    RESEARCH_TREE.forEach(r => {if(G.research.has(r.id)) r.effect(G);});
     updateUI();
-  }
-};
+  } catch(e){}
+}
 
-window.upgradePlanet = function(idx) {
-  let p = planets[idx];
-  if (p.unlocked && stardust >= p.cost) {
-    stardust -= p.cost;
-    p.level += 1;
-    updateUI();
-  }
-};
-
+// --- EVENTS ---
 document.getElementById('collectBtn').onclick = function() {
-  stardust += 1;
+  G.stardust += 1;
+  G.stats.totalStardust++;
+  G.stats.totalClicks++;
+  playSound(400);
   updateUI();
+  saveGame();
 };
+window.unlockPlanet = unlockPlanet;
+window.upgradePlanet = upgradePlanet;
+window.buyAutoUpgrade = buyAutoUpgrade;
+window.buyResearch = buyResearch;
+window.prestige = prestige;
+window.toggleSound = toggleSound;
 
-setInterval(() => {
-  let totalIncome = planets.reduce((sum, p) => p.unlocked ? sum + p.income : sum, 0);
-  stardust += totalIncome / 10; // 10 ticks per second
-  updateUI();
-}, 100);
-
+// --- MAIN LOOP ---
+function gameLoop() {
+  let now = Date.now();
+  let dt = Math.min(0.2, (now-lastTick)/1000); // max 0.2s step
+  lastTick = now;
+  tick(dt);
+  if(Date.now()%5000<30) saveGame();
+  requestAnimationFrame(gameLoop);
+}
+loadGame();
 updateUI();
+gameLoop();
 </script>
 </body>
 </html>
