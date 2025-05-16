@@ -1,26 +1,29 @@
 # Solar System Idle Game
 
-Welcome to **Solar System Idle Game**, a simple web-based idle/incremental game where you build and expand your own solar system! Earn stardust, unlock planets, upgrade celestial bodies, and automate your galactic growth.
+Welcome to the **Solar System Idle Game**! Build and expand your own solar system, unlock planets, automate your progress, earn achievements, research new tech, and push the boundaries of the cosmos with prestige resets.
 
 ## Features
 
-- **Start with the Sun**: Accumulate stardust, the currency of the cosmos.
-- **Unlock Planets**: Spend stardust to add Mercury, Venus, Earth, and more to your system.
-- **Upgrade Planets**: Increase planet productivity to generate more stardust per second.
-- **Automation**: Planets automatically generate stardust. Unlock upgrades to automate further!
-- **Progression**: The more planets and upgrades you own, the faster your stardust production.
+- **Unlock Planets and Dwarf Planets**: Earn Stardust to discover Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus, Neptune, Pluto, Ceres, Eris, Haumea, Makemake, and more!
+- **Upgrade and Automate**: Boost planet output and automate stardust collection.
+- **Tech/Research Tree**: Unlock powerful upgrades and automation with research points.
+- **Achievements**: Complete in-game goals for bonuses and bragging rights.
+- **Prestige (“Galaxy Reset”)**: Reset your system to gain Galaxy Points and accelerate your next run.
+- **Save and Load Progress**: All progress is saved automatically in your browser.
+- **Stats and Progression**: Track your journey through the stars.
+- **Visual and Audio Elements**: Enjoy a clean interface and simple sound feedback.
 
 ## How to Play
 
-1. Press "Collect Stardust" to start earning.
-2. Spend stardust to unlock new planets.
-3. Upgrade planets to increase stardust generation.
-4. Watch your solar system grow!
+1. Click "Collect Stardust" to get started.
+2. Spend Stardust to unlock planets and upgrades.
+3. Invest in automation and research for exponential growth.
+4. Earn achievements and use the prestige system for long-term progression.
 
-## Run Locally
+## Running Locally
 
-Simply open `index.html` in your web browser.
+Open `index.html` in your browser—no installation required.
 
 ---
 
-Enjoy your journey through the stars!
+Enjoy your cosmic adventure!
