@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Solar System Idle Game</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #10161b; color: #fff; text-align: center; }
+    .container { max-width: 600px; margin: 2em auto; background: #19222b; padding: 2em; border-radius: 12px; }
+    button { padding: 0.7em 1.5em; margin: 1em 0.5em; border: none; border-radius: 6px; background: #ffd700; color: #222; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+    button:disabled { background: #555; color: #aaa; cursor: not-allowed; }
+    .planet-list { margin: 2em 0; }
+    .planet { background: #222d3a; margin: 1em 0; padding: 1em; border-radius: 8px; }
+    .planet h3 { margin: 0.2em 0; }
+    .stat { margin: 1em 0; }
+    .stardust { color: #ffd700; font-size: 1.4em; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>Solar System Idle Game</h1>
+  <div class="stat">
+    <span>Stardust: </span>
+    <span class="stardust" id="stardust">0</span>
+    <span>/s: <span id="perSec">0</span></span>
+  </div>
+  <button id="collectBtn">Collect Stardust (+1)</button>
+  <div class="planet-list" id="planets"></div>
+</div>
+<script>
+const PLANET_DATA = [
+  { name: "Sun", baseCost: 0, baseIncome: 1, unlocked: true },
+  { name: "Mercury", baseCost: 20, baseIncome: 2 },
+  { name: "Venus", baseCost: 100, baseIncome: 8 },
+  { name: "Earth", baseCost: 500, baseIncome: 20 },
+  { name: "Mars", baseCost: 2000, baseIncome: 65 },
+  { name: "Jupiter", baseCost: 7500, baseIncome: 250 },
+  { name: "Saturn", baseCost: 20000, baseIncome: 1100 },
+  { name: "Uranus", baseCost: 100000, baseIncome: 4800 },
+  { name: "Neptune", baseCost: 350000, baseIncome: 17000 }
+];
+
+let stardust = 0;
+let planets = PLANET_DATA.map((p, i) => ({
+  ...p,
+  unlocked: !!p.unlocked,
+  level: p.unlocked ? 1 : 0,
+  get cost() {
+    // Cost increases per level
+    return Math.floor(p.baseCost * Math.pow(1.15, this.level - (this.unlocked ? 1 : 0)));
+  },
+  get income() {
+    return p.baseIncome * this.level;
+  }
+}));
+
+function updateUI() {
+  document.getElementById('stardust').textContent = Math.floor(stardust);
+  let perSec = planets.reduce((sum, p) => p.unlocked ? sum + p.income : sum, 0);
+  document.getElementById('perSec').textContent = perSec;
+
+  let planetDiv = document.getElementById('planets');
+  planetDiv.innerHTML = '';
+  planets.forEach((p, idx) => {
+    let div = document.createElement('div');
+    div.className = 'planet';
+    if (!p.unlocked && stardust < p.baseCost) div.style.opacity = 0.5;
+    div.innerHTML = `
+      <h3>${p.name} ${p.unlocked ? '' : '(Locked)'}</h3>
+      <div>Level: ${p.level}</div>
+      <div>Income: ${p.unlocked ? p.income : 0} Stardust/s</div>
+      ${!p.unlocked ? 
+        `<button ${stardust < p.baseCost ? 'disabled' : ''} onclick="unlockPlanet(${idx})">
+          Unlock for ${p.baseCost} Stardust
+        </button>` 
+        : 
+        `<button onclick="upgradePlanet(${idx})">
+          Upgrade (+1 Level, Cost: ${p.cost} Stardust)
+        </button>`
+      }
+    `;
+    planetDiv.appendChild(div);
+  });
+}
+
+window.unlockPlanet = function(idx) {
+  let p = planets[idx];
+  if (!p.unlocked && stardust >= p.baseCost) {
+    stardust -= p.baseCost;
+    p.unlocked = true;
+    p.level = 1;
+    updateUI();
+  }
+};
+
+window.upgradePlanet = function(idx) {
+  let p = planets[idx];
+  if (p.unlocked && stardust >= p.cost) {
+    stardust -= p.cost;
+    p.level += 1;
+    updateUI();
+  }
+};
+
+document.getElementById('collectBtn').onclick = function() {
+  stardust += 1;
+  updateUI();
+};
+
+setInterval(() => {
+  let totalIncome = planets.reduce((sum, p) => p.unlocked ? sum + p.income : sum, 0);
+  stardust += totalIncome / 10; // 10 ticks per second
+  updateUI();
+}, 100);
+
+updateUI();
+</script>
+</body>
+</html>
